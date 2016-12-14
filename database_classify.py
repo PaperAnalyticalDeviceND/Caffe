@@ -42,14 +42,22 @@ drugs = ["Acetaminophen",
          ]
 
 #inline parameter?
-optlist, args = getopt.getopt(sys.argv[1:], 'i:')
+optlist, args = getopt.getopt(sys.argv[1:], 'i:c:f:')
 
 sampleID = ""
+catagory = ""
+filename = "tmp/drugs.csv"
 
 for o, a in optlist:
     if o == '-i':
         sampleID = a
         print "Sample ID", sampleID
+    elif o == '-c':
+        catagory = a
+        print "Catagory", catagory
+    elif o == '-f':
+        filename = a
+        print "File name", filename
     else:
         print 'Unhandled option: ', o
         sys.exit(-2)
@@ -58,7 +66,14 @@ for o, a in optlist:
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 #parse ID
-sid = int(sampleID)
+sid = 0
+if sampleID != "":
+    sid = int(sampleID)
+
+#check input data
+if sid == 0 and catagory == "":
+    print "Insufficient input data"
+    sys.exit(-1)
 
 #get database credentials
 with open('credentials.txt') as f:
@@ -77,11 +92,26 @@ db = MySQLdb.connect(host="localhost", # your host, usually localhost
 cur = db.cursor()
 
 # Use all the SQL you like
-cur.execute('SELECT `id`,`processed_file_location`,`sample_name` FROM `card` WHERE `sample_id`='+str(sid))
+if sid != 0:
+    cur.execute('SELECT `id`,`processed_file_location`,`sample_name`,`sample_id` FROM `card` WHERE `sample_id`='+str(sid))
+else:
+    cur.execute('SELECT `id`,`processed_file_location`,`sample_name`,`sample_id` FROM `card` WHERE `catagory`='+catagory)
+
+#open file?
+if filename != "":
+    f = open(filename,"w+")
 
 # print all the first cell of all the rows
 for row in cur.fetchall() :
     print row[0],row[1]
+    
+    #test that drug exists
+    if row[2] not in drugs:
+        print "Drug ", row[2], "not in training list!"
+        #sys.exit(-2)
+        continue
+    
+    #get input data
     filename = row[1]
     id = row[0]
     
@@ -122,10 +152,18 @@ for row in cur.fetchall() :
     print '\tDrug', drugs[pClass1], drugs[pClass2], drugs[pClass3]
     print '\tExpected', row[2]
 
-    #os.remove('tmp/test.png')
+    os.remove('tmp/test.png')
+
+    #save data
+    if f:
+        f.write(str(row[0])+','+str(row[3])+','+str(row[2])+','+drugs[pClass1]+','+str(prediction[0][pClass1])+','+str(pClass1)+','+drugs[pClass2]+','+str(prediction[0][pClass2])+','+str(pClass2)+','+drugs[pClass3]+','+str(prediction[0][pClass3])+','+str(pClass3)+',\r\n')
+
 
     #just do first instance
-    break
+    #break
+
+if f:
+    f.close()
 
 # Close all cursors
 cur.close()
