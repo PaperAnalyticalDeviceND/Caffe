@@ -10,6 +10,36 @@ import numpy as np
 import math
 import caffe
 from PIL import Image
+import copy
+
+#setup drugs list
+drugs = ["Acetaminophen",
+         "AcetylsalicylicAcid",
+         "Amodiaquine",
+         "Amoxicillin",
+         "Ampicillin",
+         "Artesunate",
+         "CalciumCarbonate",
+         "CornStarch",
+         "Diethylcarbamazine",
+         "Ethambutol",
+         "Isoniazid",
+         "Rifampicin",
+         "Tetracycline",
+         "Azithromycin",
+         "Chloramphenicol",
+         "Chloroquine",
+         "Ciprofloxacin",
+         "DIWater",
+         "DriedWheatStarch",
+         "PenicillinG",
+         "PotatoStarch",
+         "Primaquine",
+         "Quinine",
+         "Streptomycin",
+         "Sulfadoxine",
+         "Talc"
+         ]
 
 #inline parameter?
 optlist, args = getopt.getopt(sys.argv[1:], 'i:')
@@ -47,7 +77,7 @@ db = MySQLdb.connect(host="localhost", # your host, usually localhost
 cur = db.cursor()
 
 # Use all the SQL you like
-cur.execute('SELECT `id`,`processed_file_location` FROM `card` WHERE `sample_id`='+str(sid))
+cur.execute('SELECT `id`,`processed_file_location`,`sample_name` FROM `card` WHERE `sample_id`='+str(sid))
 
 # print all the first cell of all the rows
 for row in cur.fetchall() :
@@ -68,7 +98,7 @@ for row in cur.fetchall() :
 
     #predict
     caffe.set_mode_cpu()
-    net = caffe.Classifier('deploy.prototxt', 'Sandipan1_Full_26Drugs_iter_100000.caffemodel',
+    net = caffe.Classifier('deploy.prototxt', 'Sandipan1_Full_26Drugs_iter_50000.caffemodel',
                            mean=np.load('imagenet_mean.npy').mean(1).mean(1),
                            channel_swap=(2,1,0),
                            raw_scale=255,
@@ -77,11 +107,20 @@ for row in cur.fetchall() :
 
     input_image = caffe.io.load_image('tmp/test.png')
     prediction = net.predict([input_image])
-    pClass = prediction[0].argmax()
+
+    temppred = copy.deepcopy(prediction[0])
+    pClass1 = temppred.argmax()
+
+    temppred[pClass1] = 0
+    pClass2 = temppred.argmax()
+
+    temppred[pClass2] = 0
+    pClass3 = temppred.argmax()
     print file
-    print '\tClass:', pClass
-    print '\tProbability', prediction[0][pClass]
-    
+    print '\tClass:', pClass1, pClass2, pClass3
+    print '\tProbability', prediction[0][pClass1], prediction[0][pClass2], prediction[0][pClass3]
+    print '\tDrug', drugs[pClass1], drugs[pClass2], drugs[pClass3]
+    print '\tExpected', row[2]
 
     #os.remove('tmp/test.png')
 
