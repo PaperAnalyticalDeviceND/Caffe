@@ -41,6 +41,9 @@ drugs = ["Acetaminophen",
          "Talc"
          ]
 
+positive_classify = [0] * 26
+negative_classify = [0] * 26
+
 #inline parameter?
 optlist, args = getopt.getopt(sys.argv[1:], 'i:c:f:')
 
@@ -111,6 +114,9 @@ for row in cur.fetchall() :
         #sys.exit(-2)
         continue
     
+    #get drug index
+    drugindex = drugs.index(row[2])
+
     #get input data
     filename = row[1]
     id = row[0]
@@ -154,6 +160,12 @@ for row in cur.fetchall() :
 
     os.remove('tmp/test.png')
 
+    #update stats
+    if drugindex == pClass1:
+        positive_classify[drugindex] = positive_classify[drugindex] + 1
+    else:
+        negative_classify[drugindex] = negative_classify[drugindex] + 1
+
     #save data
     if f:
         f.write(str(row[0])+','+str(row[3])+','+str(row[2])+','+drugs[pClass1]+','+str(prediction[0][pClass1])+','+str(pClass1)+','+drugs[pClass2]+','+str(prediction[0][pClass2])+','+str(pClass2)+','+drugs[pClass3]+','+str(prediction[0][pClass3])+','+str(pClass3)+',\r\n')
@@ -161,6 +173,14 @@ for row in cur.fetchall() :
 
     #just do first instance
     #break
+
+#print stats
+for i in range(0,26):
+    temptotal = positive_classify[i] + negative_classify[i]
+    if temptotal > 0:
+        print "Drug",drugs[i], positive_classify[i] / temptotal, temptotal
+        if f:
+            f.write(drugs[i]+','+str(positive_classify[i] / temptotal)+','+str(temptotal)+',\r\n')
 
 if f:
     f.close()
