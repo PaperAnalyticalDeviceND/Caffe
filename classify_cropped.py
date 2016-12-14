@@ -3,7 +3,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import math
 import copy
-from PIL import Image
 
 #setup drugs list
 drugs = ["Acetaminophen",
@@ -42,13 +41,6 @@ os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 import caffe
 
-#get processed image
-img = Image.open(sys.argv[1])
-    
-#crop comparison
-img = img.crop((72, 359+5, 72+636, 359+5+490))
-img.save('tmp/test.png')
-
 caffe.set_mode_cpu()
 net = caffe.Classifier('deploy.prototxt', 'Sandipan1_Full_26Drugs_iter_50000.caffemodel',
                        mean=np.load('imagenet_mean.npy').mean(1).mean(1),
@@ -57,7 +49,7 @@ net = caffe.Classifier('deploy.prototxt', 'Sandipan1_Full_26Drugs_iter_50000.caf
                        image_dims=(256, 256))
 
 
-input_image = caffe.io.load_image('tmp/test.png')
+input_image = caffe.io.load_image(sys.argv[1])
 prediction = net.predict([input_image])
 
 temppred = copy.deepcopy(prediction[0])
