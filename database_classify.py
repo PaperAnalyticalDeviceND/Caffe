@@ -14,13 +14,13 @@ import copy
 
 #setup drugs list
 drugs = ["Acetaminophen",
-         "AcetylsalicylicAcid",
+         "Acetylsalicylic Acid",
          "Amodiaquine",
          "Amoxicillin",
          "Ampicillin",
          "Artesunate",
-         "CalciumCarbonate",
-         "CornStarch",
+         "Calcium Carbonate",
+         "Corn Starch",
          "Diethylcarbamazine",
          "Ethambutol",
          "Isoniazid",
@@ -30,10 +30,10 @@ drugs = ["Acetaminophen",
          "Chloramphenicol",
          "Chloroquine",
          "Ciprofloxacin",
-         "DIWater",
-         "DriedWheatStarch",
-         "PenicillinG",
-         "PotatoStarch",
+         "DI water",
+         "Dried Wheat Starch",
+         "Penicillin G",
+         "Potato Starch",
          "Primaquine",
          "Quinine",
          "Streptomycin",
@@ -45,10 +45,11 @@ positive_classify = [0] * 26
 negative_classify = [0] * 26
 
 #inline parameter?
-optlist, args = getopt.getopt(sys.argv[1:], 'i:c:f:')
+optlist, args = getopt.getopt(sys.argv[1:], 'i:c:f:t:')
 
 sampleID = ""
 catagory = ""
+test = ""
 outfilename = "tmp/drugs.csv"
 
 for o, a in optlist:
@@ -61,6 +62,9 @@ for o, a in optlist:
     elif o == '-f':
         outfilename = a
         print "File name", outfilename
+    elif o == '-t':
+        test = a
+        print "Test name", test
     else:
         print 'Unhandled option: ', o
         sys.exit(-2)
@@ -74,7 +78,7 @@ if sampleID != "":
     sid = int(sampleID)
 
 #check input data
-if sid == 0 and catagory == "":
+if sid == 0 and catagory == "" and test == "":
     print "Insufficient input data"
     sys.exit(-1)
 
@@ -97,6 +101,8 @@ cur = db.cursor()
 # Use all the SQL you like
 if sid != 0:
     cur.execute('SELECT `id`,`processed_file_location`,`sample_name`,`sample_id` FROM `card` WHERE `sample_id`='+str(sid)+' AND `processed_file_location`!=""')
+elif test != "":
+    cur.execute('SELECT `id`,`processed_file_location`,`sample_name`,`sample_id` FROM `card` WHERE `test_name`="'+test+'" AND `processed_file_location`!=""')
 else:
     #print 'SELECT `id`,`processed_file_location`,`sample_name`,`sample_id` FROM `card` WHERE `category`="'+catagory+'"'
     cur.execute('SELECT `id`,`processed_file_location`,`sample_name`,`sample_id` FROM `card` WHERE `category`="'+catagory+'" AND `processed_file_location`!=""')
