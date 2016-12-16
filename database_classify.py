@@ -45,11 +45,13 @@ positive_classify = [0] * 26
 negative_classify = [0] * 26
 
 #inline parameter?
-optlist, args = getopt.getopt(sys.argv[1:], 'i:c:f:t:')
+optlist, args = getopt.getopt(sys.argv[1:], 'i:c:f:t:s:m:')
 
 sampleID = ""
 catagory = ""
 test = ""
+sample = ""
+model = 'Sandipan1_Full_26Drugs_iter_50000.caffemodel'
 outfilename = "tmp/drugs.csv"
 
 for o, a in optlist:
@@ -65,6 +67,12 @@ for o, a in optlist:
     elif o == '-t':
         test = a
         print "Test name", test
+    elif o == '-s':
+        sample = a
+        print "Sample name", sample
+    elif o == '-m':
+        model = a
+        print "Caffe model", model
     else:
         print 'Unhandled option: ', o
         sys.exit(-2)
@@ -78,7 +86,7 @@ if sampleID != "":
     sid = int(sampleID)
 
 #check input data
-if sid == 0 and catagory == "" and test == "":
+if sid == 0 and catagory == "" and test == "" and sample == "":
     print "Insufficient input data"
     sys.exit(-1)
 
@@ -101,8 +109,12 @@ cur = db.cursor()
 # Use all the SQL you like
 if sid != 0:
     cur.execute('SELECT `id`,`processed_file_location`,`sample_name`,`sample_id` FROM `card` WHERE `sample_id`='+str(sid)+' AND `processed_file_location`!=""')
+elif test != "" and sample != "":
+    cur.execute('SELECT `id`,`processed_file_location`,`sample_name`,`sample_id` FROM `card` WHERE `test_name`="'+test+'" AND `sample_name`="'+sample+'" AND `processed_file_location`!=""')
 elif test != "":
     cur.execute('SELECT `id`,`processed_file_location`,`sample_name`,`sample_id` FROM `card` WHERE `test_name`="'+test+'" AND `processed_file_location`!=""')
+elif sample != "":
+    cur.execute('SELECT `id`,`processed_file_location`,`sample_name`,`sample_id` FROM `card` WHERE `sample_name`="'+sample+'" AND `processed_file_location`!=""')
 else:
     #print 'SELECT `id`,`processed_file_location`,`sample_name`,`sample_id` FROM `card` WHERE `category`="'+catagory+'"'
     cur.execute('SELECT `id`,`processed_file_location`,`sample_name`,`sample_id` FROM `card` WHERE `category`="'+catagory+'" AND `processed_file_location`!=""')
@@ -141,7 +153,7 @@ for row in cur.fetchall() :
 
     #predict
     caffe.set_mode_cpu()
-    net = caffe.Classifier('deploy.prototxt', 'Sandipan1_Full_26Drugs_iter_50000.caffemodel',
+    net = caffe.Classifier('deploy.prototxt', model,
                            mean=np.load('imagenet_mean.npy').mean(1).mean(1),
                            channel_swap=(2,1,0),
                            raw_scale=255,
