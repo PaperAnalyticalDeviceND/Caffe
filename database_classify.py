@@ -12,46 +12,21 @@ import caffe
 from PIL import Image
 import copy
 
-#setup drugs list
-drugs = ["Acetaminophen",
-         "Acetylsalicylic Acid",
-         "Amodiaquine",
-         "Amoxicillin",
-         "Ampicillin",
-         "Artesunate",
-         "Calcium Carbonate",
-         "Corn Starch",
-         "Diethylcarbamazine",
-         "Ethambutol",
-         "Isoniazid",
-         "Rifampicin",
-         "Tetracycline",
-         "Azithromycin",
-         "Chloramphenicol",
-         "Chloroquine",
-         "Ciprofloxacin",
-         "DI water",
-         "Dried Wheat Starch",
-         "Penicillin G",
-         "Potato Starch",
-         "Primaquine",
-         "Quinine",
-         "Streptomycin",
-         "Sulfadoxine",
-         "Talc"
-         ]
-
-positive_classify = [0] * 26
-negative_classify = [0] * 26
-
 #inline parameter?
-optlist, args = getopt.getopt(sys.argv[1:], 'i:c:f:t:s:m:')
+optlist, args = getopt.getopt(sys.argv[1:], 'i:c:f:t:s:m:d:')
+
+#setup drugs list
+drugs = ["Amoxicillin",
+         "Acetaminophen",
+         "Ciprofloxacin",
+         "Ceftriaxone"
+         ]
 
 sampleID = ""
 catagory = ""
 test = ""
 sample = ""
-model = 'Sandipan1_Full_26Drugs_iter_50000.caffemodel'
+model = 'pad_data1_70000.caffemodel'
 outfilename = "tmp/drugs.csv"
 
 for o, a in optlist:
@@ -73,9 +48,15 @@ for o, a in optlist:
     elif o == '-m':
         model = a
         print "Caffe model", model
+    elif o == '-d':
+        drugs = a.split(',')
+        print "Drugs", ', '.join(drugs)
     else:
         print 'Unhandled option: ', o
         sys.exit(-2)
+
+positive_classify = [0] * len(drugs)
+negative_classify = [0] * len(drugs)
 
 #set to my folder
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
@@ -194,7 +175,7 @@ for row in cur.fetchall() :
     #break
 
 #print stats
-for i in range(0,26):
+for i in range(0,len(drugs)):
     temptotal = positive_classify[i] + negative_classify[i]
     if temptotal > 0:
         print "Drug",drugs[i], positive_classify[i], temptotal
