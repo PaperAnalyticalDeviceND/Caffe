@@ -13,7 +13,7 @@ from PIL import Image
 import copy
 
 #inline parameter?
-optlist, args = getopt.getopt(sys.argv[1:], 'i:c:f:t:s:m:d:')
+optlist, args = getopt.getopt(sys.argv[1:], 'i:c:f:t:s:m:d:e:')
 
 #setup drugs list
 drugs = ["Amoxicillin",
@@ -22,11 +22,12 @@ drugs = ["Amoxicillin",
          "Ceftriaxone"
          ]
 
+exclude = ""
 sampleID = ""
 catagory = ""
 test = ""
 sample = ""
-model = 'pad_data1_70000.caffemodel'
+model = 'pad_aug1_110000.caffemodel'
 outfilename = "tmp/drugs.csv"
 
 for o, a in optlist:
@@ -51,6 +52,9 @@ for o, a in optlist:
     elif o == '-d':
         drugs = a.split(',')
         print "Drugs", ', '.join(drugs)
+    elif o == '-e':
+        exclude = a
+        print "Exclusions", exclude
     else:
         print 'Unhandled option: ', o
         sys.exit(-2)
@@ -88,17 +92,27 @@ db = MySQLdb.connect(host="localhost", # your host, usually localhost
 cur = db.cursor()
 
 # Use all the SQL you like
+sqlcommand = 'SELECT `id`,`processed_file_location`,`sample_name`,`sample_id` FROM `card` WHERE `processed_file_location`!=""'
+
 if sid != 0:
-    cur.execute('SELECT `id`,`processed_file_location`,`sample_name`,`sample_id` FROM `card` WHERE `sample_id`='+str(sid)+' AND `processed_file_location`!=""')
-elif test != "" and sample != "":
-    cur.execute('SELECT `id`,`processed_file_location`,`sample_name`,`sample_id` FROM `card` WHERE `test_name`="'+test+'" AND `sample_name`="'+sample+'" AND `processed_file_location`!=""')
-elif test != "":
-    cur.execute('SELECT `id`,`processed_file_location`,`sample_name`,`sample_id` FROM `card` WHERE `test_name`="'+test+'" AND `processed_file_location`!=""')
-elif sample != "":
-    cur.execute('SELECT `id`,`processed_file_location`,`sample_name`,`sample_id` FROM `card` WHERE `sample_name`="'+sample+'" AND `processed_file_location`!=""')
-else:
-    #print 'SELECT `id`,`processed_file_location`,`sample_name`,`sample_id` FROM `card` WHERE `category`="'+catagory+'"'
-    cur.execute('SELECT `id`,`processed_file_location`,`sample_name`,`sample_id` FROM `card` WHERE `category`="'+catagory+'" AND `processed_file_location`!=""')
+    sqlcommand = sqlcommand + ' AND `sample_id`='+str(sid)
+    #cur.execute('SELECT `id`,`processed_file_location`,`sample_name`,`sample_id` FROM `card` WHERE `sample_id`='+str(sid)+' AND `processed_file_location`!=""')
+
+if test != "":
+    sqlcommand = sqlcommand + ' AND `test_name`="'+test+'"'
+    #cur.execute('SELECT `id`,`processed_file_location`,`sample_name`,`sample_id` FROM `card` WHERE `test_name`="'+test+'" AND `processed_file_location`!=""')
+
+if sample != "":
+    sqlcommand = sqlcommand + ' AND `sample_name`="'+sample+'"'
+    #cur.execute('SELECT `id`,`processed_file_location`,`sample_name`,`sample_id` FROM `card` WHERE `sample_name`="'+sample+'" AND `processed_file_location`!=""')
+
+if catagory != "":
+    sqlcommand = sqlcommand + ' AND `category`="'+catagory+'"'
+    #cur.execute('SELECT `id`,`processed_file_location`,`sample_name`,`sample_id` FROM `card` WHERE `category`="'+catagory+'" AND `processed_file_location`!=""')
+
+#print and execute
+print "SQL command", sqlcommand
+cur.execute(sqlcommand)
 
 #open file?
 if outfilename != "":
@@ -129,8 +143,26 @@ for row in cur.fetchall() :
     img = Image.open(filename)
 
     #crop comparison
-    img = img.crop((72, 359+5, 72+636, 359+5+490))
-    img.save('tmp/test.png')
+    img = img.crop((71, 359, 71+636, 359+490))
+    
+    #lanes split
+    lane = []
+        
+    #loop over lanes
+    for i in range(0,12):
+        if chr(65+i) not in exclude:
+            lane.append(img.crop((53*i, 0, 53*(i+1), 490)))
+
+    #reconstruct
+    imgout = Image.new("RGB", (53 * len(lane),490))
+    
+    #loop over lanes
+    for i in range(0,len(lane)):
+        imgout.paste(lane[i], (53*i, 0, 53*(i+1), 490))
+    
+    #resize and save
+    imgout = imgout.resize((256,256), Image.ANTIALIAS)
+    imgout.save('tmp/test.png')
 
     #predict
     caffe.set_mode_cpu()

@@ -196,17 +196,17 @@ layer {
   }
 }
 layer {
-  name: "fc8"
+  name: "fc8_pad"
   type: "InnerProduct"
   bottom: "fc7"
-  top: "fc8"
+  top: "fc8_pad"
   inner_product_param {
-    num_output: 1000
+    num_output: 4
   }
 }
 layer {
   name: "prob"
   type: "Softmax"
-  bottom: "fc8"
+  bottom: "fc8_pad"
   top: "prob"
 }
