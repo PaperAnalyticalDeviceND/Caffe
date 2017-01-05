@@ -13,7 +13,7 @@ from PIL import Image
 import copy
 
 #inline parameter?
-optlist, args = getopt.getopt(sys.argv[1:], 'i:c:f:t:s:m:d:e:')
+optlist, args = getopt.getopt(sys.argv[1:], 'i:c:f:t:s:m:d:e:n:')
 
 #setup drugs list
 drugs = ["Amoxicillin",
@@ -29,6 +29,7 @@ test = ""
 sample = ""
 model = 'pad_aug1_110000.caffemodel'
 outfilename = "tmp/drugs.csv"
+imagenet = 'imagenet_mean.npy'
 
 for o, a in optlist:
     if o == '-i':
@@ -55,6 +56,9 @@ for o, a in optlist:
     elif o == '-e':
         exclude = a
         print "Exclusions", exclude
+    elif o == '-n':
+        imagenet = a
+        print "Imagenet numpy", imagenet
     else:
         print 'Unhandled option: ', o
         sys.exit(-2)
@@ -167,7 +171,7 @@ for row in cur.fetchall() :
     #predict
     caffe.set_mode_cpu()
     net = caffe.Classifier('deploy.prototxt', model,
-                           mean=np.load('imagenet_mean.npy').mean(1).mean(1),
+                           mean=np.load(imagenet).mean(1).mean(1),
                            channel_swap=(2,1,0),
                            raw_scale=255,
                            image_dims=(256, 256))
