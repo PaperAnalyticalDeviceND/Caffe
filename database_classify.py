@@ -9,11 +9,20 @@ import numpy as np
 #import matplotlib.pyplot as plt
 import math
 import caffe
-from PIL import Image
+from PIL import Image, ImageEnhance, ImageStat
 import copy
+import math
+
+# function to return average brightness of an image
+# Source: http://stackoverflow.com/questions/3490727/what-are-some-methods-to-analyze-image-brightness-using-python
+def brightness(im):
+    stat = ImageStat.Stat(im)
+    r,g,b = stat.mean
+    #return math.sqrt(0.241*(r**2) + 0.691*(g**2) + 0.068*(b**2))   #this is a way of averaging the r g b values to derive "human-visible" brightness
+    return math.sqrt(0.577*(r**2) + 0.577*(g**2) + 0.577*(b**2))
 
 #inline parameter?
-optlist, args = getopt.getopt(sys.argv[1:], 'i:c:f:t:s:m:d:e:n:')
+optlist, args = getopt.getopt(sys.argv[1:], 'i:c:f:t:s:m:d:e:n:b:')
 
 #setup drugs list
 drugs = ["Amoxicillin",
@@ -30,6 +39,9 @@ sample = ""
 model = 'pad_aug1_110000.caffemodel'
 outfilename = "tmp/drugs.csv"
 imagenet = 'imagenet_mean.npy'
+image_height = 490
+#was 490 to include reactions below test line
+target_brightness = 0
 
 for o, a in optlist:
     if o == '-i':
@@ -59,6 +71,9 @@ for o, a in optlist:
     elif o == '-n':
         imagenet = a
         print "Imagenet numpy", imagenet
+    elif o == '-b':
+        target_brightness = float(a)
+        print "Target brightness", target_brightness
     else:
         print 'Unhandled option: ', o
         sys.exit(-2)
@@ -146,8 +161,16 @@ for row in cur.fetchall() :
     #get processed image
     img = Image.open(filename)
 
+    #brightness, if set. Was set to 165.6 for 4 drug average
+    if target_brightness > 0:
+        bright = brightness(img)
+    
+        #massage image
+        imgbright = ImageEnhance.Brightness(img)
+        img = imgbright.enhance(target_brightness/bright)
+
     #crop comparison
-    img = img.crop((71, 359, 71+636, 359+490))
+    img = img.crop((71, 359, 71+636, 359+image_height))
     
     #lanes split
     lane = []
@@ -155,17 +178,17 @@ for row in cur.fetchall() :
     #loop over lanes
     for i in range(0,12):
         if chr(65+i) not in exclude:
-            lane.append(img.crop((53*i, 0, 53*(i+1), 490)))
+            lane.append(img.crop((53*i, 0, 53*(i+1), image_height)))
 
     #reconstruct
-    imgout = Image.new("RGB", (53 * len(lane),490))
+    imgout = Image.new("RGB", (53 * len(lane),image_height))
     
     #loop over lanes
     for i in range(0,len(lane)):
-        imgout.paste(lane[i], (53*i, 0, 53*(i+1), 490))
+        imgout.paste(lane[i], (53*i, 0, 53*(i+1), image_height))
     
     #resize and save
-    imgout = imgout.resize((256,256), Image.ANTIALIAS)
+    imgout = imgout.resize((227,227), Image.ANTIALIAS)
     imgout.save('tmp/test.png')
 
     #predict
@@ -174,7 +197,7 @@ for row in cur.fetchall() :
                            mean=np.load(imagenet).mean(1).mean(1),
                            channel_swap=(2,1,0),
                            raw_scale=255,
-                           image_dims=(256, 256))
+                           image_dims=(227, 227))
 
 
     input_image = caffe.io.load_image('tmp/test.png')
