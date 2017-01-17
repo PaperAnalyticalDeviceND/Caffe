@@ -22,7 +22,7 @@ def brightness(im):
     return math.sqrt(0.577*(r**2) + 0.577*(g**2) + 0.577*(b**2))
 
 #inline parameter?
-optlist, args = getopt.getopt(sys.argv[1:], 'i:c:f:t:s:m:d:e:n:b:')
+optlist, args = getopt.getopt(sys.argv[1:], 'i:c:f:t:s:m:d:e:n:b:h:')
 
 #setup drugs list
 drugs = ["Amoxicillin",
@@ -36,6 +36,7 @@ sampleID = ""
 catagory = ""
 test = ""
 sample = ""
+sample_detect = ""
 model = 'pad_aug1_110000.caffemodel'
 outfilename = "tmp/drugs.csv"
 imagenet = 'imagenet_mean.npy'
@@ -74,6 +75,9 @@ for o, a in optlist:
     elif o == '-b':
         target_brightness = float(a)
         print "Target brightness", target_brightness
+    elif o == '-h':
+        sample_detect = a
+        print "Sample to detect", sample_detect
     else:
         print 'Unhandled option: ', o
         sys.exit(-2)
@@ -219,11 +223,19 @@ for row in cur.fetchall() :
 
     os.remove('tmp/test.png')
 
-    #update stats
-    if drugindex == pClass1:
-        positive_classify[drugindex] = positive_classify[drugindex] + 1
+    if sample_detect == "":
+        #update stats
+        if drugindex == pClass1:
+            positive_classify[drugindex] = positive_classify[drugindex] + 1
+        else:
+            negative_classify[drugindex] = negative_classify[drugindex] + 1
     else:
-        negative_classify[drugindex] = negative_classify[drugindex] + 1
+        #update stats
+        if (row[2] == sample_detect and pClass1 == 0) or (row[2] != sample_detect and pClass1 == 1):
+            #if drugindex == pClass1:
+            positive_classify[drugindex] = positive_classify[drugindex] + 1
+        else:
+            negative_classify[drugindex] = negative_classify[drugindex] + 1
 
     #save data
     if f:
