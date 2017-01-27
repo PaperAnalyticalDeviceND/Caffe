@@ -91,7 +91,13 @@ if target_brightness > 0:
     img = imgbright.enhance(target_brightness/bright)
 
 #open filename /var/www/html/joomla/neuralnetworks/
-f = open('nn.csv',"w+")
+pos1 = sys.argv[1].rfind('-')
+pos2 = sys.argv[1].rfind('.')
+
+randpart = sys.argv[1][pos1+1:pos2-10]
+#print "Rand part", randpart
+
+f = open('nnet/nn'+randpart+'.csv',"w+")
 
 #crop comparison
 #crop comparison
@@ -114,7 +120,7 @@ for i in range(0,len(lane)):
 
 #resize and save
 imgout = imgout.resize((227,227), Image.ANTIALIAS)
-imgout.save('test.png')
+imgout.save('classify/test'+randpart+'.png')
 
 #find prediction
 caffe.set_mode_cpu()
@@ -125,7 +131,7 @@ net = caffe.Classifier(deploy, model,
                        image_dims=(227, 227))
 
 
-input_image = caffe.io.load_image('test.png')
+input_image = caffe.io.load_image('classify/test'+randpart+'.png')
 prediction = net.predict([input_image])
 
 #find the highest probability
